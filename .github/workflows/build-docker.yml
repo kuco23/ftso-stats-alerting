@@ -23,10 +23,7 @@ jobs:
         REPOSITORY: '${{ github.repository }}'
       run: |
         # tag main if main branch
-        if [[ "${{ github.ref_name }}" == "main" ]]; then
-          image_tags=("main")
-        # tag with tag name if tag
-        elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+        if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
           image_tags=("${{ github.ref_name }}")
           # tag with latest if tag is a new major, minor or patch version
           if [[ "${{ github.ref_name}}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
