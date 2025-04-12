@@ -37,7 +37,7 @@ def get_explorer_url(network: str) -> str:
     else:
         raise ValueError("Invalid network. Use 'flare' or 'songbird'.")
 
-# === Get wallet balance from explorer API ===
+# === Get wallet stats from systems explorer API ===
 def get_stats(network: str, address: str, retries: int = 3, delay: float = 1.0) -> Stats:
     base_url = get_explorer_url(network)
     api_path = get_api_path(address)
@@ -95,16 +95,15 @@ def check_all_addresses(network: str, addresses: List[str]):
         else:
             print(f"{address} OK: {stats} {network}")
 
-        # Add delay to avoid hitting rate limits
-        time.sleep(CYCLE_SLEEP_SECONDS)
-
 # === Main entry point ===
 if __name__ == "__main__":
-    try:
-        check_all_addresses(NETWORK, ADDRESSES)
-    except Exception as err:
-        send_telegram_alert(f"❌ General error in the script: {err} on {NETWORK}")
-        sys.exit(1)
+    while True:
+        try:
+            check_all_addresses(NETWORK, ADDRESSES)
+        except Exception as err:
+            send_telegram_alert(f"❌ General error in the script: {err} on {NETWORK}")
+            sys.exit(1)
+        time.sleep(CYCLE_SLEEP_SECONDS)
 
 # This is a test alert from the script.
 #send_telegram_alert("✅ *This is a test alert from the script.*")
