@@ -1,0 +1,14 @@
+services:
+  ftso_alerting:
+    container_name: ${COMPOSE_PROJECT_NAME}
+    image: ${CI_REGISTRY_IMAGE}:${DEPLOY_IMAGE_TAG}
+    network_mode: host
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
+      NETWORK: ${NETWORK}
+      ADDRESSES: ${ADDRESSES}
+      MIN_AVAILABILITY: ${MIN_AVAILABILITY}
+      MIN_SUCCESS_RATE_PRIMARY: ${MIN_SUCCESS_RATE_PRIMARY}
+      MIN_SUCCESS_RATE_SECONDARY: ${MIN_SUCCESS_RATE_SECONDARY}
+    command: ["python", "-u", "run.py"]
