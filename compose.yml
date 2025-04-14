@@ -12,3 +12,4 @@ services:
       MIN_SUCCESS_RATE_PRIMARY: ${MIN_SUCCESS_RATE_PRIMARY}
       MIN_SUCCESS_RATE_SECONDARY: ${MIN_SUCCESS_RATE_SECONDARY}
     command: ["python", "-u", "run.py"]
+    restart: unless-stopped
