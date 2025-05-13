@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 # === Load environment variables ===
 load_dotenv()
 
-NETWORK = os.getenv("NETWORK", "flare").lower()
+NETWORKS = os.getenv("NETWORK", "flare,songbird").lower().split(',')
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
@@ -75,33 +75,32 @@ def send_telegram_alert(message: str):
 
 
 # === Check all addresses and send alerts ===
-def check_all_addresses(network: str, addresses: List[str]):
-    for address in addresses:
+def check_all_addresses(networks: List[str], addresses: List[str]):
+    for network, address in zip(networks, addresses):
         stats = get_stats(network, address)
         if stats == -1:
-            send_telegram_alert(f"❌ *Error* retrieving stats for `{address}` (request error on {NETWORK})")
-        elif stats.availability < MIN_AVAILABILITY:
+            send_telegram_alert(f"❌ *Error* retrieving stats for `{address}` (request error on {NETWORKS})")
+        if stats.availability < MIN_AVAILABILITY:
             send_telegram_alert(
-                f"⚠️ `{address}` has availability *{stats.availability:.4f}* on {NETWORK} (threshold: {MIN_AVAILABILITY})"
+                f"⚠️ `{address}` has availability *{stats.availability:.4f}* on {NETWORKS} (threshold: {MIN_AVAILABILITY})"
             )
-        elif stats.success_rate_primary < MIN_SUCCESS_RATE_PRIMARY:
+        if stats.success_rate_primary < MIN_SUCCESS_RATE_PRIMARY:
             send_telegram_alert(
-                f"⚠️ `{address}` has primary success rate *{stats.success_rate_primary:.4f}* on ${NETWORK} (threshold: {MIN_SUCCESS_RATE_PRIMARY})"
+                f"⚠️ `{address}` has primary success rate *{stats.success_rate_primary:.4f}* on ${NETWORKS} (threshold: {MIN_SUCCESS_RATE_PRIMARY})"
             )
-        elif stats.success_rate_secondary < MIN_SUCCESS_RATE_SECONDARY:
+        if stats.success_rate_secondary < MIN_SUCCESS_RATE_SECONDARY:
             send_telegram_alert(
-                f"⚠️ `{address}` has secondary success rate *{stats.success_rate_secondary:.4f}* on {NETWORK} (threshold: {MIN_SUCCESS_RATE_SECONDARY})"
+                f"⚠️ `{address}` has secondary success rate *{stats.success_rate_secondary:.4f}* on {NETWORKS} (threshold: {MIN_SUCCESS_RATE_SECONDARY})"
             )
-        else:
-            print(f"{address} OK: {stats} {network}")
+        print(f"{address}: {stats} {network}")
 
 # === Main entry point ===
 if __name__ == "__main__":
     while True:
         try:
-            check_all_addresses(NETWORK, ADDRESSES)
+            check_all_addresses(NETWORKS, ADDRESSES)
         except Exception as err:
-            send_telegram_alert(f"❌ General error in the script: {err} on {NETWORK}")
+            send_telegram_alert(f"❌ Error in the script: {err} on {NETWORKS}")
             sys.exit(1)
         time.sleep(CYCLE_SLEEP_SECONDS)
 
