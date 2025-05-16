@@ -29,6 +29,13 @@ class Stats:
     success_rate_primary: float
     success_rate_secondary: float
 
+@dataclass
+class Notification:
+    stats: Stats
+    availability: bool
+    success_rate_primary: bool
+    success_rate_secondary: bool
+
 def get_explorer_url(network: str) -> str:
     if network == "flare":
         return "https://flare-systems-explorer.flare.rocks"
@@ -74,21 +81,44 @@ def send_telegram_alert(message: str):
         print(f"Error sending Telegram alert: {e}")
 
 
+d = dict()
+for network, address in zip(NETWORKS, ADDRESSES):
+    d[(network, address)] = {
+        'availability': 1,
+        'success_rate_primary': 1,
+        'success_rate_secondary': 1
+    }
+
+def get_notifications(network: str, address: str, stats: Stats) -> Notification:
+    data = d[(network, address)]
+    notification = Notification(stats, False, False, False)
+    if stats.availability < min(data['availability'], MIN_AVAILABILITY):
+        notification.availability = True
+    if stats.success_rate_primary < min(data['success_rate_primary'], MIN_SUCCESS_RATE_PRIMARY):
+        notification.success_rate_primary = True
+    if stats.success_rate_secondary < min(data['success_rate_secondary'], MIN_SUCCESS_RATE_SECONDARY):
+        notification.success_rate_secondary = True
+    data['availability'] = stats.availability
+    data['success_rate_primary'] = stats.success_rate_primary
+    data['success_rate_secondary'] = stats.success_rate_secondary
+    return notification
+
 # === Check all addresses and send alerts ===
 def check_all_addresses(networks: List[str], addresses: List[str]):
     for network, address in zip(networks, addresses):
         stats = get_stats(network, address)
         if stats == -1:
             send_telegram_alert(f"❌ *Error* retrieving stats for `{address}` (request error on {network})")
-        if stats.availability < MIN_AVAILABILITY:
+        notifications = get_notifications(network, address, stats)
+        if notifications.availability:
             send_telegram_alert(
                 f"⚠️ `{address}` has availability *{stats.availability:.4f}* on {network} (threshold: {MIN_AVAILABILITY})"
             )
-        if stats.success_rate_primary < MIN_SUCCESS_RATE_PRIMARY:
+        if notifications.success_rate_primary:
             send_telegram_alert(
                 f"⚠️ `{address}` has primary success rate *{stats.success_rate_primary:.4f}* on ${network} (threshold: {MIN_SUCCESS_RATE_PRIMARY})"
             )
-        if stats.success_rate_secondary < MIN_SUCCESS_RATE_SECONDARY:
+        if notifications.success_rate_secondary:
             send_telegram_alert(
                 f"⚠️ `{address}` has secondary success rate *{stats.success_rate_secondary:.4f}* on {network} (threshold: {MIN_SUCCESS_RATE_SECONDARY})"
             )
