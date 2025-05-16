@@ -79,18 +79,18 @@ def check_all_addresses(networks: List[str], addresses: List[str]):
     for network, address in zip(networks, addresses):
         stats = get_stats(network, address)
         if stats == -1:
-            send_telegram_alert(f"❌ *Error* retrieving stats for `{address}` (request error on {NETWORKS})")
+            send_telegram_alert(f"❌ *Error* retrieving stats for `{address}` (request error on {network})")
         if stats.availability < MIN_AVAILABILITY:
             send_telegram_alert(
-                f"⚠️ `{address}` has availability *{stats.availability:.4f}* on {NETWORKS} (threshold: {MIN_AVAILABILITY})"
+                f"⚠️ `{address}` has availability *{stats.availability:.4f}* on {network} (threshold: {MIN_AVAILABILITY})"
             )
         if stats.success_rate_primary < MIN_SUCCESS_RATE_PRIMARY:
             send_telegram_alert(
-                f"⚠️ `{address}` has primary success rate *{stats.success_rate_primary:.4f}* on ${NETWORKS} (threshold: {MIN_SUCCESS_RATE_PRIMARY})"
+                f"⚠️ `{address}` has primary success rate *{stats.success_rate_primary:.4f}* on ${network} (threshold: {MIN_SUCCESS_RATE_PRIMARY})"
             )
         if stats.success_rate_secondary < MIN_SUCCESS_RATE_SECONDARY:
             send_telegram_alert(
-                f"⚠️ `{address}` has secondary success rate *{stats.success_rate_secondary:.4f}* on {NETWORKS} (threshold: {MIN_SUCCESS_RATE_SECONDARY})"
+                f"⚠️ `{address}` has secondary success rate *{stats.success_rate_secondary:.4f}* on {network} (threshold: {MIN_SUCCESS_RATE_SECONDARY})"
             )
         print(f"{address}: {stats} {network}")
 
