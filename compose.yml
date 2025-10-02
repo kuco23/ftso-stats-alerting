@@ -11,5 +11,6 @@ services:
       MIN_AVAILABILITY: ${MIN_AVAILABILITY}
       MIN_SUCCESS_RATE_PRIMARY: ${MIN_SUCCESS_RATE_PRIMARY}
       MIN_SUCCESS_RATE_SECONDARY: ${MIN_SUCCESS_RATE_SECONDARY}
+      RPC_URLS: ${RPC_URLS}
     command: ["python", "-u", "run.py"]
     restart: unless-stopped

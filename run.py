@@ -1,6 +1,5 @@
 from typing import List
 import time
-import sys
 import os
 from dataclasses import dataclass
 import requests
@@ -18,9 +17,11 @@ MIN_AVAILABILITY = float(os.getenv("MIN_AVAILABILITY", "10"))
 MIN_SUCCESS_RATE_PRIMARY = float(os.getenv('MIN_SUCCESS_RATE_PRIMARY', '10'))
 MIN_SUCCESS_RATE_SECONDARY = float(os.getenv('MIN_SUCCESS_RATE_SECONDARY', '10'))
 
+RPC_URLS = os.getenv("RPC_URLS").split(',')
+
 CYCLE_SLEEP_SECONDS = 60 * 5 # check every 5 minutes
 
-def get_api_path(address: str) -> str:
+def get_fsp_api_path(address: str) -> str:
     return f'/backend-url/api/v0/entity/{address}/ftso'
 
 @dataclass
@@ -35,6 +36,7 @@ class Notification:
     availability: bool
     success_rate_primary: bool
     success_rate_secondary: bool
+    rpc_health: bool
 
 def get_explorer_url(network: str) -> str:
     if network == "flare":
@@ -45,9 +47,9 @@ def get_explorer_url(network: str) -> str:
         raise ValueError("Invalid network. Use 'flare' or 'songbird'.")
 
 # === Get wallet stats from systems explorer API ===
-def get_stats(network: str, address: str, retries: int = 3, delay: float = 1.0) -> Stats:
+def get_fsp_stats(network: str, address: str, retries: int = 3, delay: float = 1.0) -> Stats:
     base_url = get_explorer_url(network)
-    api_path = get_api_path(address)
+    api_path = get_fsp_api_path(address)
     endpoint = base_url + api_path
 
     for attempt in range(1, retries + 1):
@@ -55,16 +57,28 @@ def get_stats(network: str, address: str, retries: int = 3, delay: float = 1.0) 
             resp = requests.get(endpoint, timeout=10).json()
             last_6h_data = resp.get('last_6h')
             return Stats(
-                availability=float(last_6h_data['availability']),
-                success_rate_primary=float(last_6h_data['primary']),
-                success_rate_secondary=float(last_6h_data['secondary'])
+                availability = float(last_6h_data['availability']),
+                success_rate_primary = float(last_6h_data['primary']),
+                success_rate_secondary = float(last_6h_data['secondary'])
             )
         except Exception as e:
             print(f"Attempt {attempt} failed for {address}: {e}")
         if attempt < retries:
             time.sleep(delay)
 
+def get_rpc_health(rpc: str, retries: int = 3, delay: float = 1.0) -> bool:
+    endpoint = f'{rpc}/ext/health'
+    for attempt in range(1, retries + 1):
+        try:
+            resp = requests.get(endpoint, timeout=2).json()
+            return resp.get('health')
+        except Exception as e:
+            print(f"Attempt {attempt} failed for rpc health: {e}")
+        if attempt < retries:
+            time.sleep(delay)
+
     return -1  # all attempts failed
+
 
 def send_telegram_alert(message: str):
     print(f"Sending Telegram alert: {message}")
@@ -91,7 +105,7 @@ for network, address in zip(NETWORKS, ADDRESSES):
 
 def get_notifications(network: str, address: str, stats: Stats) -> Notification:
     data = d[(network, address)]
-    notification = Notification(stats, False, False, False)
+    notification = Notification(stats, False, False, False, False)
     if stats.availability < min(data['availability'], MIN_AVAILABILITY):
         notification.availability = True
     if stats.success_rate_primary < min(data['success_rate_primary'], MIN_SUCCESS_RATE_PRIMARY):
@@ -106,7 +120,7 @@ def get_notifications(network: str, address: str, stats: Stats) -> Notification:
 # === Check all addresses and send alerts ===
 def check_all_addresses(networks: List[str], addresses: List[str]):
     for network, address in zip(networks, addresses):
-        stats = get_stats(network, address)
+        stats = get_fsp_stats(network, address)
         if stats == -1:
             send_telegram_alert(f"❌ *Error* retrieving stats for `{address}` (request error on {network})")
         notifications = get_notifications(network, address, stats)
@@ -124,6 +138,12 @@ def check_all_addresses(networks: List[str], addresses: List[str]):
             )
         print(f"{address}: {stats} {network}")
 
+    for rpc in RPC_URLS:
+        ok = get_rpc_health(rpc)
+        if not ok:
+            send_telegram_alert(f"⚠️ `rpc {rpc} is unhealthy")
+
+
 # === Main entry point ===
 if __name__ == "__main__":
     while True:
@@ -131,7 +151,6 @@ if __name__ == "__main__":
             check_all_addresses(NETWORKS, ADDRESSES)
         except Exception as err:
             send_telegram_alert(f"❌ Error in the script: {err} on {NETWORKS}")
-            sys.exit(1)
         time.sleep(CYCLE_SLEEP_SECONDS)
 
 # This is a test alert from the script.
